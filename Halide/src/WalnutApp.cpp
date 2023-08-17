@@ -14,6 +14,10 @@ public:
 	{
 		ImGui::Begin("Settings");
 		ImGui::Text("Last Render: %.3fms", m_LastRenderTime);
+
+		// float my_color[4] = { 0,0,0,0 };
+		// ImGui::ColorEdit4("Color", my_color);
+
 		if (ImGui::Button("Render"))
 		{
 			Render();
