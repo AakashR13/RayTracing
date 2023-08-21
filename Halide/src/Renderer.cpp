@@ -2,6 +2,9 @@
 
 #include "Walnut/Random.h"
 
+#include <execution>
+
+
 namespace Utils {
 
 	static uint32_t ConvertToRGBA(const glm::vec4& color)
@@ -37,6 +40,12 @@ void Renderer::OnResize(uint32_t width, uint32_t height)
 	delete[] m_AccumulationData;
 	m_AccumulationData = new glm::vec4[width * height];
 
+	m_ImageHorizontalIterator.resize(width);
+	m_ImageVerticalIterator.resize(height);
+	for (uint32_t i = 0; i < width; i++)
+		m_ImageHorizontalIterator[i] = i;
+	for (uint32_t i=0; i < height; i++)
+		m_ImageVerticalIterator[i] = i;
 }
 
 void Renderer::Render(const Scene& scene, const Camera& camera)
@@ -46,6 +55,48 @@ void Renderer::Render(const Scene& scene, const Camera& camera)
 
 	if (m_FrameIndex == 1)
 		memset(m_AccumulationData, 0, m_FinalImage->GetWidth() * m_FinalImage->GetHeight() * sizeof(glm::vec4));
+
+
+	
+	// Try implementing threadpool
+#define MT 1
+#if MT
+
+	// ~2m -> 1920x1080
+	std::for_each(std::execution::par,m_ImageVerticalIterator.begin(), m_ImageVerticalIterator.end(),
+		[this](uint32_t y)
+		{
+		#if 0
+			std::for_each(std::execution::par, m_ImageHorizontalIterator.begin(), m_ImageHorizontalIterator.end(),
+			[this, y](uint32_t x)
+				{
+					glm::vec4 color = PerPixel(x, y);
+					m_AccumulationData[x + y * m_FinalImage->GetWidth()] += color;
+
+					glm::vec4 accumulatedColor = m_AccumulationData[x + y * m_FinalImage->GetWidth()];
+					accumulatedColor /= (float)m_FrameIndex;
+
+					accumulatedColor = glm::clamp(accumulatedColor, glm::vec4(0.0f), glm::vec4(1.0f));
+					m_ImageData[x + y * m_FinalImage->GetWidth()] = Utils::ConvertToRGBA(accumulatedColor);
+				});
+		#else // 0
+
+				for (uint32_t x = 0; x < m_FinalImage->GetWidth(); x++)
+				{
+					glm::vec4 color = PerPixel(x, y);
+					m_AccumulationData[x + y * m_FinalImage->GetWidth()] += color;
+
+					glm::vec4 accumulatedColor = m_AccumulationData[x + y * m_FinalImage->GetWidth()];
+					accumulatedColor /= (float)m_FrameIndex;
+
+					accumulatedColor = glm::clamp(accumulatedColor, glm::vec4(0.0f), glm::vec4(1.0f));
+					m_ImageData[x + y * m_FinalImage->GetWidth()] = Utils::ConvertToRGBA(accumulatedColor);
+				}
+		#endif	
+		});
+
+#else
+		
 	// y being on the outside is friendly to the gpu
 	// This is because now we are moving forwards along the buffer(by uint32_t) and not skipping bits which would happen if we switched the loops
 	for (uint32_t y = 0; y < m_FinalImage->GetHeight(); y++)
@@ -62,6 +113,7 @@ void Renderer::Render(const Scene& scene, const Camera& camera)
 			m_ImageData[x + y * m_FinalImage->GetWidth()] = Utils::ConvertToRGBA(accumulatedColor);
 		}
 	}
+#endif
 
 	m_FinalImage->SetData(m_ImageData);
 

@@ -9,6 +9,8 @@
 
 #include "glm/gtc/type_ptr.hpp"
 
+// #include <thread>
+
 using namespace Walnut;
 
 class ExampleLayer : public Walnut::Layer
@@ -52,12 +54,12 @@ public:
 	{
 		ImGui::Begin("Settings");
 		ImGui::Text("Last Render: %.3fms", m_LastRenderTime);
-
+		// ImGui::Text("Threads: %d", std::thread::hardware_concurrency());
 		if (ImGui::Button("Render"))
 		{
 			Render();
 		}
-
+  
 		ImGui::Checkbox("Accumulate", &m_Renderer.GetSettings().Accumulate);
 
 		if (ImGui::Button("Reset"))
