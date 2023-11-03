@@ -74,7 +74,7 @@ public:
 		}
   
 		ImGui::Checkbox("Accumulate", &m_Renderer.GetSettings().Accumulate);
-		ImGui::Checkbox("SlowRandom", &m_Renderer.GetSettings().SlowRandom);
+		ImGui::Checkbox("FastRandom", &m_Renderer.GetSettings().FastRandom);
 
 		if (ImGui::Button("Reset"))
 		{

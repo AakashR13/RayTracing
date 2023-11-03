@@ -19,7 +19,7 @@ namespace Utils {
 		return result;
 	}
 
-	static uint32_t PCG_Hash(uint32_t input)
+	static uint32_t PCG_Hash(uint32_t input) // Random Functions
 	{
 		uint32_t state = input * 747796405u + 2891336453u;
 		uint32_t word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
@@ -32,7 +32,7 @@ namespace Utils {
 		return (float)seed / (float)std::numeric_limits<uint32_t>::max();
 	}
 	
-	static glm::vec3 InUnitSphere(uint32_t& seed)
+	static glm::vec3 InUnitSphere(uint32_t& seed) // For ray reflection
 	{
 		return glm::normalize(glm::vec3(RandomFloat(seed) * 2.0f -1.0f,
 			RandomFloat(seed) * 2.0f - 1.0f, 
@@ -161,7 +161,6 @@ glm::vec4 Renderer::PerPixel(uint32_t x, uint32_t y)
 	for (int i = 0; i < bounces; i++)
 	{
 		seed += i;
-
 		Renderer::HitPayload payload = TraceRay(ray);
 		if (payload.HitDistance < 0.0f)
 		{
@@ -173,18 +172,23 @@ glm::vec4 Renderer::PerPixel(uint32_t x, uint32_t y)
 		const Sphere& sphere = m_ActiveScene->Spheres[payload.ObjectIndex];
 		const Material& material = m_ActiveScene->Materials[sphere.MaterialIndex];
 
-		throughput *= material.Albedo; 
+		throughput *= material.Albedo;	
 		light += material.GetEmission();  
 
-		ray.Origin = payload.WorldPosition + payload.WorldNormal * 0.0001f;
+		ray.Origin = payload.WorldPosition + payload.WorldNormal * 0.0001f; // Deals with Floating point error
 		// ray.Direction = glm::reflect(ray.Direction, payload.WorldNormal + material.Roughness * Walnut::Random::Vec3(-0.5f,0.5f));
-		if (m_Settings.SlowRandom)
-			ray.Direction = glm::normalize(payload.WorldNormal + Walnut::Random::InUnitSphere());
-		else
+		if (m_Settings.FastRandom)
 			ray.Direction = glm::normalize(payload.WorldNormal + Utils::InUnitSphere(seed));
+		else
+			ray.Direction = glm::normalize(payload.WorldNormal + Walnut::Random::InUnitSphere());
 	}
-
+#define GM 0
+#if GM
+	return glm::vec4(linearToGamma(light), 1.0f);
+#else
 	return glm::vec4(light, 1.0f);
+#endif
+
 }
 
 Renderer::HitPayload Renderer::ClosestHit(const Ray& ray, float hitDistance, int objectIndex)

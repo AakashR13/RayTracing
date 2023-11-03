@@ -15,7 +15,7 @@ public:
 	struct Settings
 	{
 		bool Accumulate = true;
-		bool SlowRandom = true;
+		bool FastRandom = true;
 	};
 public:
 	Renderer() = default;
@@ -30,6 +30,8 @@ public:
 
 	void ResetFrameIndex() { m_FrameIndex = 1; }
 	Settings& GetSettings() { return m_Settings;  }
+
+	inline glm::vec3 linearToGamma(glm::vec3 linVec) { return glm::vec3{ sqrt(linVec.x),sqrt(linVec.y),sqrt(linVec.z) }; };
 
 private:
 	struct HitPayload
