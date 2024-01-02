@@ -9,6 +9,9 @@
 
 #include "glm/gtc/type_ptr.hpp"
 
+#include <thread>
+#include <memory>
+
 // #include <thread>
 
 using namespace Walnut;
@@ -20,27 +23,22 @@ public:
 		: m_Camera(45.0f, 0.1f, 100.0f) 
 	{
 
-		Material& blueSphere = m_Scene.Materials.emplace_back();
-		blueSphere.Albedo = { 1.0f,0.0f,1.0f };
-		blueSphere.Roughness = 0.1f;
+		Light* skyLight = new Light(glm::vec3{ -1.0f, -1.0f,-1.0f }, glm::vec3{ 0.6f, 0.7f, 0.9f });
+		m_Scene.Lights.emplace_back(skyLight);
+
+		Lambertian *pinkSphere = new Lambertian(glm::vec3{ 1.0f, 0.0f, 1.0f }, 1.0f, 0.0f);
+		m_Scene.Materials.emplace_back(pinkSphere);
 	
-		Material& pinkSphere = m_Scene.Materials.emplace_back();
-		pinkSphere.Albedo = { 0.2f,0.3f,1.0f };
-		pinkSphere.Roughness = 0.0f;
+		Metal *blueSphere = new Metal(glm::vec3{ 0.2f,0.3f,1.0f }, 0.0f, 1.0f);
+		m_Scene.Materials.emplace_back(blueSphere);
 
 		{
-			Sphere sphere;
-			sphere.Position = { 0.0f, -101.0f, 0.0f };
-			sphere.Radius = 100.0f;
-			sphere.MaterialIndex = 0;
+			Sphere* sphere = new Sphere({ 0.0f, -101.0f, 0.0f }, 100.0f, 0);
 			m_Scene.Spheres.push_back(sphere);
 		}
 
 		{
-			Sphere sphere;
-			sphere.Position = { 0.0f, 0.0f, 0.0f };
-			sphere.Radius = 1.0f;
-			sphere.MaterialIndex = 1;
+			Sphere* sphere = new Sphere({ 0.0f, 0.0f, 0.0f }, 1.0f, 1);
 			m_Scene.Spheres.push_back(sphere);
 		} 
 	}
@@ -54,7 +52,7 @@ public:
 	{
 		ImGui::Begin("Settings");
 		ImGui::Text("Last Render: %.3fms", m_LastRenderTime);
-		// ImGui::Text("Threads: %d", std::thread::hardware_concurrency());
+		ImGui::Text("Threads: %d", std::thread::hardware_concurrency());
 		if (ImGui::Button("Render"))
 		{
 			Render();
@@ -69,31 +67,41 @@ public:
 		ImGui::End();
 
 		ImGui::Begin("Scene");
+		if (ImGui::Button("Add Object")) {
+			m_Scene.addObject(LambertianMat);
+		}
 		for(size_t i =0; i<m_Scene.Spheres.size(); i++)
 		{
 			ImGui::PushID(i);
-			
-			Sphere& sphere = m_Scene.Spheres[i];
-			ImGui::DragFloat3("Position", glm::value_ptr(sphere.Position), 0.01f);
-			ImGui::DragFloat("Radius", &sphere.Radius, 0.01f);
-			ImGui::DragInt("MatIndex", &sphere.MaterialIndex, 1.0f, 0, (int)m_Scene.Materials.size() - 1);
+			Sphere* sphere = m_Scene.Spheres[i];
+			ImGui::Text("Object %d: ", i);
+			ImGui::DragFloat3("Position", glm::value_ptr(sphere->Position), 0.01f);
+			ImGui::DragFloat("Radius", &sphere->Radius, 0.01f);
+			ImGui::DragInt("MatIndex", &sphere->MaterialIndex, 1.0f, 0, (int)m_Scene.Materials.size() - 1);
 
+			Material* material = m_Scene.Materials[sphere->MaterialIndex];
+			ImGui::ColorEdit3("Albedo", glm::value_ptr(material->Albedo));
+			ImGui::DragFloat("Roughness", &material->Roughness, 0.05f, 0.0f, 1.0f);
+			ImGui::DragFloat("Metallic", &material->Metallic, 0.05f, 0.0f, 1.0f);
+			if (ImGui::Button("Delete Object")) {
+				
+			}
 			ImGui::Separator();
 			ImGui::PopID();
 		}
 
-		for (size_t i = 0; i < m_Scene.Materials.size(); i++)
-		{
-			ImGui::PushID(i);
+		//for (size_t i = 0; i < m_Scene.Materials.size(); i++)
+		//{
+		//	ImGui::PushID(i);
 
-			Material& material = m_Scene.Materials[i];
-			ImGui::ColorEdit3("Albedo", glm::value_ptr(material.Albedo));
-			ImGui::DragFloat("Roughness", &material.Roughness, 0.05f,0.0f,1.0f);
-			ImGui::DragFloat("Metallic", &material.Metallic, 0.05f, 0.0f, 1.0f);
+		//	Material* material = m_Scene.Materials[i];
+		//	ImGui::ColorEdit3("Albedo", glm::value_ptr(material->Albedo));
+		//	ImGui::DragFloat("Roughness", &material->Roughness, 0.05f,0.0f,1.0f);
+		//	ImGui::DragFloat("Metallic", &material->Metallic, 0.05f, 0.0f, 1.0f);
 
-			ImGui::Separator();
-			ImGui::PopID();
-		}
+		//	ImGui::Separator();
+		//	ImGui::PopID();	
+		//}
 			ImGui::End();
 
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
@@ -123,6 +131,9 @@ public:
 		m_Renderer.Render(m_Scene,m_Camera);
 
 		m_LastRenderTime = timer.ElapsedMillis();
+	}
+	~ExampleLayer() {	
+		m_Scene.~m_Scene();
 	}
 private:
 	Renderer m_Renderer;

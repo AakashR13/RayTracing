@@ -5,6 +5,7 @@
 #include "Camera.h"
 #include "Ray.h"
 #include "Scene.h"
+#include "HitPayload.h"
 
 #include <memory>
 #include <glm/glm.hpp>
@@ -15,6 +16,7 @@ public:
 	struct Settings
 	{
 		bool Accumulate = true;
+		bool FastRandom = true;
 	};
 public:
 	Renderer() = default;
@@ -28,22 +30,16 @@ public:
 	std::shared_ptr<Walnut::Image> GetFinalImage() const { return m_FinalImage; };
 
 	void ResetFrameIndex() { m_FrameIndex = 1; }
-	Settings& GetSettings() { return m_Settings;  }
+	Settings& GetSettings() { return m_Settings; }
+
+	inline glm::vec3 linearToGamma(glm::vec3 linVec) { return glm::vec3{ sqrt(linVec.x),sqrt(linVec.y),sqrt(linVec.z) }; };
 
 private:
-	struct HitPayload
-	{
-		float HitDistance;
-		glm::vec3 WorldPosition;
-		glm::vec3 WorldNormal;
-
-		int ObjectIndex;
-	};
 
 	glm::vec4 PerPixel(uint32_t x, uint32_t y); // RayGen Shader
 
 	HitPayload TraceRay(const Ray& ray);
-	HitPayload ClosestHit(const Ray& ray,float hitDistance, int objectIndex);
+	HitPayload ClosestHit(const Ray& ray, float hitDistance, int objectIndex);
 	HitPayload Miss(const Ray& ray);
 
 private:
