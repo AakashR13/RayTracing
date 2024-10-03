@@ -18,6 +18,7 @@ struct Material
 };
 struct Sphere
 {
+	int Id = 0;
 	glm::vec3 Position{ 0.0f };
 	float Radius = 0.5f;
 
