@@ -19,41 +19,40 @@ public:
 	ExampleLayer()
 		: m_Camera(45.0f, 0.1f, 100.0f) 
 	{
+		m_Scene.SkyLight = glm::vec3{ 0.6f, 0.7f, 0.9f };
 
-		Material& blueSphere = m_Scene.Materials.emplace_back();
-		blueSphere.Albedo = { 1.0f,0.0f,1.0f };
-		blueSphere.Roughness = 0.1f;
-	
-		Material& pinkSphere = m_Scene.Materials.emplace_back();
-		pinkSphere.Albedo = { 0.2f,0.3f,1.0f };
-		pinkSphere.Roughness = 0.0f;
+		Light* not_skyLight = new Light(glm::vec3{ -1.0f, -1.0f,-1.0f }, glm::vec3{ 0.6f, 0.7f, 0.9f });
+		m_Scene.Lights.emplace_back(not_skyLight);
 
-		Material& orangeSphere = m_Scene.Materials.emplace_back();
-		orangeSphere.Albedo = { 0.8f,0.5f,0.2f };
-		orangeSphere.Roughness = 0.0f;
-		orangeSphere.EmissionColor = orangeSphere.Albedo;
-		orangeSphere.EmissionPower = 2.0f;
+		Diffuse* material_ground = new Diffuse(glm::vec3{ 0.8f, 0.8f, 0.0f });
+		m_Scene.Materials.emplace_back(material_ground);
+
+		Diffuse* material_center = new Diffuse(glm::vec3{ 0.1f, 0.2f, 0.5f });
+		m_Scene.Materials.emplace_back(material_center);
+
+		Metal* material_left = new Metal(glm::vec3{ 0.8f, 0.8f, 0.8f },0.0f);
+		m_Scene.Materials.emplace_back(material_left);
+
+		Metal* material_right = new Metal(glm::vec3{ 0.8f, 0.6f, 0.2f }, 0.0f);
+		m_Scene.Materials.emplace_back(material_right);
 
 		{
-			Sphere sphere;
-			sphere.Position = { 0.0f, -101.0f, 0.0f };
-			sphere.Radius = 100.0f;
-			sphere.MaterialIndex = 0;
+			Sphere* sphere = new Sphere({ 0.0f, -100.5f, -1.0f }, 100.0f, 0);
 			m_Scene.Spheres.push_back(sphere);
 		}
 
 		{
-			Sphere sphere;
-			sphere.Position = { 0.0f, 0.0f, 0.0f };
-			sphere.Radius = 1.0f;
-			sphere.MaterialIndex = 1;
+			Sphere* sphere = new Sphere({ 0.0f, 0.0f, -1.2f }, 0.5f, 1);
 			m_Scene.Spheres.push_back(sphere);
-		} 
+		}
+
 		{
-			Sphere sphere;
-			sphere.Position = { 2.0f, 0.0f, 0.0f };
-			sphere.Radius = 1.0f;
-			sphere.MaterialIndex = 2;
+			Sphere* sphere = new Sphere({ -1.0f, 0.0f, -1.0f }, 0.5f, 2);
+			m_Scene.Spheres.push_back(sphere);
+		}
+
+		{
+			Sphere* sphere = new Sphere({ 1.0f, 0.0f, -1.0f }, 0.5f, 3);
 			m_Scene.Spheres.push_back(sphere);
 		}
 	}
@@ -74,7 +73,6 @@ public:
 		}
   
 		ImGui::Checkbox("Accumulate", &m_Renderer.GetSettings().Accumulate);
-		ImGui::Checkbox("FastRandom", &m_Renderer.GetSettings().FastRandom);
 
 		if (ImGui::Button("Reset"))
 		{
@@ -83,39 +81,47 @@ public:
 		ImGui::End();
 
 		ImGui::Begin("Scene");
+		ImGui::Text("Lights");
+		ImGui::ColorEdit3("SkyLight Color", glm::value_ptr(m_Scene.SkyLight));
+
 		for(size_t i =0; i<m_Scene.Spheres.size(); i++)
 		{
 			ImGui::PushID(i);
-			
-			Sphere& sphere = m_Scene.Spheres[i];
-			Material& material = m_Scene.Materials[i];
-			ImGui::DragFloat3("Position", glm::value_ptr(sphere.Position), 0.01f);
-			ImGui::DragFloat("Radius", &sphere.Radius, 0.01f);
+			ImGui::Text("Object %d:", i);
+			Sphere* sphere = m_Scene.Spheres[i];
+			Material* material = m_Scene.Materials[i];
+			ImGui::DragFloat3("Position", glm::value_ptr(sphere->Position), 0.01f);
+			ImGui::DragFloat("Radius", &sphere->Radius, 0.01f);
 			// ImGui::DragInt("MatIndex", &sphere.MaterialIndex, 1.0f, 0, (int)m_Scene.Materials.size() - 1);
-			ImGui::ColorEdit3("Albedo", glm::value_ptr(material.Albedo));
-			ImGui::DragFloat("Roughness", &material.Roughness, 0.05f, 0.0f, 1.0f);
-			ImGui::DragFloat("Metallic", &material.Metallic, 0.05f, 0.0f, 1.0f);
-			ImGui::ColorEdit3("Emission Color", glm::value_ptr(material.EmissionColor), 0.01f);
-			ImGui::DragFloat("Emission Power", &material.EmissionPower, 0.05f, 0.0f, FLT_MAX);
+			ImGui::ColorEdit3("Albedo", glm::value_ptr(material->Albedo));
+			switch (material->matType) {
+				case materialType::DiffuseMat:
+					ImGui::Text("Diffuse");
+				break;
+				case materialType::MetalMat:
+					ImGui::Text("Metal");
+					ImGui::DragFloat("Roughness", &static_cast<Metal*>(material)->Roughness, 0.05f, 0.0f, 1.0f);
+				break;
+				case materialType::DialectricMat:
+					ImGui::Text("Dialectric");
+					ImGui::DragFloat("Roughness", &static_cast<Dialectric*>(material)->Roughness, 0.05f, 0.0f, 1.0f);
+					ImGui::DragFloat("Refractive Index", &static_cast<Dialectric*>(material)->Refract_ind, 0.05f, 1.0f, FLT_MAX);
+				break;
+				case materialType::EmissiveMat:
+					ImGui::Text("Emissive");
+					ImGui::ColorEdit3("Emission Color", glm::value_ptr(static_cast<Emissive*>(material)->EmissiveColor), 0.01f);
+					ImGui::DragFloat("Emission Power", &static_cast<Emissive*>(material)->EmissivePower, 0.05f, 0.0f, FLT_MAX);
+				break;
+				case materialType::None:
+				break;
+				default:
+				break;
+			}
 
 			ImGui::Separator();
 			ImGui::PopID();
 		}
 
-		//for (size_t i = 0; i < m_Scene.Materials.size(); i++)
-		//{
-		//	ImGui::PushID(i);
-		//
-		//	Material& material = m_Scene.Materials[i];
-		//	ImGui::ColorEdit3("Albedo", glm::value_ptr(material.Albedo));
-		//	ImGui::DragFloat("Roughness", &material.Roughness, 0.05f,0.0f,1.0f);
-		//	ImGui::DragFloat("Metallic", &material.Metallic, 0.05f, 0.0f, 1.0f);
-		//	ImGui::ColorEdit3("Emission Color", glm::value_ptr(material.EmissionColor), 0.01f);
-		//	ImGui::DragFloat("Emission Power", &material.EmissionPower, 0.05f, 0.0f, FLT_MAX);
-		//
-		//	ImGui::Separator();
-		//	ImGui::PopID();
-		//}
 			ImGui::End();
 
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
