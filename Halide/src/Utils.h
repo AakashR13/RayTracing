@@ -28,10 +28,12 @@ namespace Utils
 		seed = PCG_Hash(seed);
 		return (float)seed / (float)std::numeric_limits<uint32_t>::max();
 	}
+
 	static float  RandomFloat(uint32_t& seed, float min, float max)
 	{
 		return RandomFloat(seed) * (max - min) + min;
 	}
+
 	static glm::vec3 RandomVec3(uint32_t& seed)
 	{
 		return glm::vec3{ RandomFloat(seed) };
@@ -45,5 +47,10 @@ namespace Utils
 	static glm::vec3 InUnitSphere(uint32_t& seed) // For ray reflection
 	{
 		return glm::normalize(RandomVec3(seed, -1, 1));
+	}
+
+	static glm::vec3 InUnitHemiSphere(uint32_t& seed)
+	{
+		return glm::normalize(glm::vec3(RandomFloat(seed, -1, 1), RandomFloat(seed, 0, 1), RandomFloat(seed, -1, 1)));
 	}
 }

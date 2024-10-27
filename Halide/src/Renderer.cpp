@@ -105,7 +105,7 @@ glm::vec4 Renderer::PerPixel(uint32_t x, uint32_t y)
 
 		throughput *= material->Albedo;	
 		//light += material.GetEmission();  
-
+		ray.Origin = payload.WorldPosition + payload.WorldNormal * 0.0001f;
 		if (!material->scatter(ray, payload, seed)) {
 			light = glm::vec3(0.0f);
 			break;

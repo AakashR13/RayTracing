@@ -2,7 +2,7 @@
 class Renderer;
 class Ray;
 bool Diffuse::scatter(Ray& ray, const HitPayload& payload, uint32_t& seed) const {
-	ray.Direction = glm::normalize(payload.WorldNormal + Utils::InUnitSphere(seed));
+	ray.Direction = glm::normalize(payload.WorldNormal + Utils::InUnitHemiSphere(seed));
 	return true;
 }
 
